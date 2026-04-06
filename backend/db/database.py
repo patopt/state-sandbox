@@ -2,18 +2,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from config import (
-    DATABASE_URL,
-    DB_POOL_SIZE,
-    DB_MAX_OVERFLOW,
-    DB_POOL_RECYCLE,
-)
+from config import DATABASE_URL
 
+# On utilise l'argument connect_args spécifique à SQLite
 engine = create_engine(
     DATABASE_URL,
-    pool_size=DB_POOL_SIZE,  # Configurable pool size
-    max_overflow=DB_MAX_OVERFLOW,  # Configurable overflow
-    pool_recycle=DB_POOL_RECYCLE,  # Configurable connection recycling
+    connect_args={"check_same_thread": False}
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
