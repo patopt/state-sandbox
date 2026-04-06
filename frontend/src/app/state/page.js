@@ -17,6 +17,7 @@ import { PlayDialog } from '@/components/dashboard/play-dialog';
 import { ReportDialog } from '@/components/dashboard/report-dialog';
 import { withErrorBoundary } from '@/components/error-boundary';
 import { FlagSVG } from '@/components/flag-svg';
+import GameHub from '@/components/game/GameHub';
 import { InfoDialog } from '@/components/info-dialog';
 import { DashboardNav } from '@/components/nav';
 import { Badge } from '@/components/ui/badge';
@@ -203,9 +204,10 @@ function StatePageContent({ stateId }) {
           report={latestReport}
         />
 
-        <Tabs defaultValue="overview" className="space-y-4">
+        <Tabs defaultValue="strategy" className="space-y-4">
           <div className="border-b overflow-x-auto">
             <TabsList className="inline-flex min-w-full h-10">
+              <TabsTrigger value="strategy" className="font-semibold text-primary">🌍 Strategy</TabsTrigger>
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="people">People</TabsTrigger>
               <TabsTrigger value="education">Education</TabsTrigger>
@@ -223,6 +225,10 @@ function StatePageContent({ stateId }) {
               </TabsTrigger>
             </TabsList>
           </div>
+
+          <TabsContent value="strategy" className="space-y-4">
+            {stateId && <GameHub stateId={stateId} />}
+          </TabsContent>
 
           <TabsContent value="overview" className="space-y-4">
             <SafeOverviewPage snapshots={snapshots} />
