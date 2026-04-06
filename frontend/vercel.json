@@ -4,8 +4,7 @@
   "framework": "nextjs",
   "regions": ["iad1"],
   "env": {
-    "DATABASE_URL": "@database-url",
-    "DIRECT_URL": "@direct-url",
+    "DATABASE_URL": "file:/tmp/dev.db",
     "JWT_SECRET": "@jwt-secret",
     "OPENAI_API_KEY": "@openai-api-key",
     "GOOGLE_API_KEY": "@google-api-key",
