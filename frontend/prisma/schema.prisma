@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  username  String?
+  credits   Int      @default(10)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  states     State[]
+  magicLinks MagicLink[]
+
+  @@map("users")
+}
+
+model MagicLink {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int      @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("magic_links")
+}
+
+model State {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  name           String   @default("Developing Nation")
+  description    String   @default("A developing nation.")
+  flagSvg        String   @default("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"900\" height=\"600\"></svg>") @map("flag_svg")
+  date           String   @default("2022-01")
+  turnInProgress Boolean  @default(false) @map("turn_in_progress")
+  aiProvider     String   @default("openai") @map("ai_provider")
+  aiModel        String?  @map("ai_model")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshots StateSnapshot[]
+
+  @@map("states")
+}
+
+model StateSnapshot {
+  id                          Int      @id @default(autoincrement())
+  stateId                     Int      @map("state_id")
+  date                        String
+  markdownState               String   @map("markdown_state")
+  markdownDelta               String?  @map("markdown_delta")
+  markdownDeltaReport         String?  @map("markdown_delta_report")
+  markdownFutureEvents        String?  @map("markdown_future_events")
+  markdownFutureEventsPolicy  String?  @map("markdown_future_events_policy")
+  createdAt                   DateTime @default(now()) @map("created_at")
+
+  state State @relation(fields: [stateId], references: [id], onDelete: Cascade)
+
+  @@map("state_snapshots")
+}

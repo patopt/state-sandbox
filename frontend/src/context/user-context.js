@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 const UserContext = createContext({
   loading: true,
@@ -10,66 +10,66 @@ const UserContext = createContext({
   states: null,
   refreshUser: async () => {},
   refreshStates: async () => {},
-  createAccount: async (username, email) => {},
 });
+
+const PUBLIC_PATHS = ['/auth', '/auth/verify'];
 
 export function UserProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [states, setStates] = useState(null);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (localStorage.getItem('state-sandbox-token')) {
+    const token = localStorage.getItem('state-sandbox-token');
+    if (token) {
       api
         .getCurrentUser()
-        .then(setUser)
-        .then(fetchData)
-        .then(() => setLoading(false))
-        .catch((e) => {
-          if (e.message.includes('token')) {
-            localStorage.removeItem('state-sandbox-token');
+        .then((userData) => {
+          setUser(userData);
+          return api.getStates();
+        })
+        .then((statesData) => {
+          setStates(statesData);
+        })
+        .catch(() => {
+          localStorage.removeItem('state-sandbox-token');
+          if (!PUBLIC_PATHS.some((p) => pathname?.startsWith(p))) {
             router.push('/auth');
           }
-        });
+        })
+        .finally(() => setLoading(false));
     } else {
       setLoading(false);
-      router.push('/auth');
+      if (!PUBLIC_PATHS.some((p) => pathname?.startsWith(p))) {
+        router.push('/auth');
+      }
     }
   }, []);
 
   const refreshUser = async () => {
-    const user = await api.getCurrentUser();
-    setUser(user);
-  };
-
-  const fetchData = async () => {
-    await refreshStates();
+    try {
+      const userData = await api.getCurrentUser();
+      setUser(userData);
+      return userData;
+    } catch {
+      return null;
+    }
   };
 
   const refreshStates = async () => {
-    const states = await api.getStates();
-    setStates(states);
-  };
-
-  const createAccount = async (username, email) => {
-    const user = await api.createAccount(username, email);
-    setUser(user);
-    await fetchData();
-    return user;
+    try {
+      const statesData = await api.getStates();
+      setStates(statesData);
+      return statesData;
+    } catch {
+      return [];
+    }
   };
 
   return (
-    <UserContext.Provider
-      value={{
-        loading,
-        user,
-        states,
-        refreshUser,
-        refreshStates,
-        createAccount,
-      }}
-    >
+    <UserContext.Provider value={{ loading, user, states, refreshUser, refreshStates }}>
       {children}
     </UserContext.Provider>
   );

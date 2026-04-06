@@ -14,15 +14,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: 'State Sandbox AI',
+  title: 'State Sandbox — AI Grand Strategy',
   description:
-    'State Sandbox AI is a political simulation game powered by o3-mini',
+    'An AI-powered alternate history grand strategy game. Control a nation, command armies, forge diplomacy, and simulate history.',
   manifest: '/manifest.json',
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body className={`${inter.variable} ${geistMono.variable} antialiased`}>
         <UserProvider>
           {children}

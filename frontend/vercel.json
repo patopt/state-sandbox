@@ -1,0 +1,20 @@
+{
+  "buildCommand": "npm run db:generate && npm run build",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "DATABASE_URL": "@database-url",
+    "DIRECT_URL": "@direct-url",
+    "JWT_SECRET": "@jwt-secret",
+    "OPENAI_API_KEY": "@openai-api-key",
+    "GOOGLE_API_KEY": "@google-api-key",
+    "AI_PROVIDER": "openai",
+    "CREDITS_DEFAULT": "10",
+    "CREDITS_NEW_STATE_COST": "1",
+    "CREDITS_NEXT_YEAR_COST": "1",
+    "FRONTEND_URL": "@frontend-url",
+    "POSTMARK_API_KEY": "@postmark-api-key",
+    "EMAIL_FROM": "@email-from"
+  }
+}

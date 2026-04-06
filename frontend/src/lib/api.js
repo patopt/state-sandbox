@@ -1,22 +1,38 @@
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { getAISettings } from '@/components/game/AISettingsModal';
+
+// For Next.js API routes, use relative URLs
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 const TOKEN_KEY = 'state-sandbox-token';
+
+function getAuthHeaders() {
+  const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+  const aiSettings = typeof window !== 'undefined' ? getAISettings() : { provider: 'openai', model: '', apiKey: '' };
+
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    // Pass AI provider settings to API routes
+    'x-ai-provider': aiSettings.provider || 'openai',
+    ...(aiSettings.apiKey ? { 'x-ai-api-key': aiSettings.apiKey } : {}),
+    ...(aiSettings.model ? {
+      'x-ai-model-high': aiSettings.model,
+      'x-ai-model-medium': aiSettings.model,
+    } : {}),
+  };
+}
 
 class ApiClient {
   async _post(endpoint, data) {
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}`,
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
 
     if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.detail || `API error: ${res.statusText}`);
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.detail || `API error: ${res.statusText}`);
     }
 
     return res.json();
@@ -25,16 +41,13 @@ class ApiClient {
   async _postStream(endpoint, data, onMessage) {
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}`,
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
 
     if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.detail || `API error: ${res.statusText}`);
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.detail || `API error: ${res.statusText}`);
     }
 
     const reader = res.body.getReader();
@@ -51,20 +64,28 @@ class ApiClient {
 
       for (const line of lines) {
         if (line.trim()) {
-          const event = JSON.parse(line);
-          onMessage(event);
+          try {
+            const event = JSON.parse(line);
+            onMessage(event);
+          } catch {
+            // ignore malformed lines
+          }
         }
       }
     }
 
     if (buffer.trim()) {
-      const event = JSON.parse(buffer);
-      onMessage(event);
+      try {
+        const event = JSON.parse(buffer);
+        onMessage(event);
+      } catch {
+        // ignore
+      }
     }
   }
 
   async _get(endpoint, params) {
-    const url = new URL(`${API_URL}${endpoint}`);
+    const url = new URL(`${API_URL}${endpoint}`, typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -74,87 +95,33 @@ class ApiClient {
     }
 
     const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}`,
-      },
+      headers: getAuthHeaders(),
     });
 
     if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.detail || `API error: ${res.statusText}`);
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.detail || `API error: ${res.statusText}`);
     }
 
     return res.json();
   }
 
-  async _delete(endpoint) {
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}`,
-      },
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.detail || `API error: ${res.statusText}`);
-    }
-
-    return res.json();
-  }
-
-  async _patch(endpoint, data) {
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.detail || `API error: ${res.statusText}`);
-    }
-
-    return res.json();
-  }
-
-  async _put(endpoint, data) {
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.detail || `API error: ${res.statusText}`);
-    }
-
-    return res.json();
-  }
-
-  async getLatestSnapshots(valueKeys) {
-    return this._get('/api/states/latest', { valueKeys: valueKeys.join(',') });
-  }
-
-  async createAccount(username, email) {
-    const data = await this._post('/api/auth/create', { username, email });
-    localStorage.setItem(TOKEN_KEY, data.token);
-    return data.user;
-  }
-
+  // Auth
   async getCurrentUser() {
     return this._get('/api/auth/me');
   }
 
+  async emailLogin(email) {
+    return this._post('/api/auth/login', { email });
+  }
+
+  // States
   async getStates() {
     return this._get('/api/states');
+  }
+
+  async getState(stateId) {
+    return this._get(`/api/states/${stateId}`);
   }
 
   async getStateSnapshots(stateId) {
@@ -162,11 +129,12 @@ class ApiClient {
   }
 
   async createState(name, questions, onMessage) {
-    return this._postStream('/api/states', { name, questions }, onMessage);
-  }
-
-  async getState(stateId) {
-    return this._get(`/api/states/${stateId}`);
+    const aiSettings = typeof window !== 'undefined' ? getAISettings() : {};
+    return this._postStream(
+      '/api/states',
+      { name, questions, aiProvider: aiSettings.provider, aiApiKey: aiSettings.apiKey },
+      onMessage
+    );
   }
 
   async createStateSnapshot(stateId, policy, onMessage) {
@@ -180,20 +148,15 @@ class ApiClient {
   async getStateAdvice(stateId, question, events) {
     return this._post(`/api/states/${stateId}/advice`, {
       question,
-      events: events?.join('\n') || '',
+      events: Array.isArray(events) ? events : (events || '').split('\n'),
     });
   }
 
-  async emailLogin(token) {
-    const res = await this._get(`/api/auth/email-login/${token}`);
-    localStorage.setItem(TOKEN_KEY, res.token);
-    return res.user;
-  }
-
-  async updateEmail(email) {
-    return this._put('/api/auth/update-email', { email });
+  async getLatestSnapshots(valueKeys) {
+    return this._get('/api/states/leaderboard', {
+      valueKeys: Array.isArray(valueKeys) ? valueKeys.join(',') : valueKeys,
+    });
   }
 }
 
-// Export singleton instance
 export const api = new ApiClient();

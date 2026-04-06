@@ -18,6 +18,9 @@ JWT_EXPIRATION_DAYS = _int_env(
     "JWT_EXPIRATION_DAYS", 10_000
 )  # We don't have a sign back in feature
 
+# AI Provider configuration (openai or gemini)
+AI_PROVIDER = os.getenv("AI_PROVIDER", "openai")  # "openai" or "gemini"
+
 # OpenAI configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 MODEL_HIGH_REASONING = os.getenv("MODEL_HIGH_REASONING", "o3-mini-2025-01-31")
@@ -25,6 +28,12 @@ MODEL_MEDIUM_REASONING = os.getenv("MODEL_MEDIUM_REASONING", "o3-mini-2025-01-31
 MODEL_LOW_REASONING = os.getenv(
     "MODEL_LOW_REASONING", "gpt-4o"
 )  # model should support markdown
+
+# Google Gemini configuration
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GEMINI_MODEL_HIGH = os.getenv("GEMINI_MODEL_HIGH", "gemini-2.5-pro-preview-05-06")
+GEMINI_MODEL_MEDIUM = os.getenv("GEMINI_MODEL_MEDIUM", "gemini-2.0-pro-exp")
+GEMINI_MODEL_LOW = os.getenv("GEMINI_MODEL_LOW", "gemini-2.0-flash")
 
 # Cache configuration
 CACHE_TTL_STATES_LEADERBOARD = _int_env("CACHE_TTL_STATES_LEADERBOARD", 60 * 60 * 6)
